@@ -1,95 +1,102 @@
 // src/config/root.zig
-const std = @import("std");
-/// External YAML parser package (e.g. https://github.com/kristoff-it/zig-yaml)
+const std  = @import("std");
 const yaml = @import("yaml");
 
-/// Application name used for config search paths.
-/// Overwrite at comptime from build.zig if necessary.
-pub const app_name: []const u8 = "drzzln";
+/// Compile-time constant used for search paths
+pub const app_name = "drzzln";
 
-/// -----------------------------
-/// Public API
-/// -----------------------------
+// ─────────────────────────────────────────────────────────────
+// Strictly-typed DTO
+// ─────────────────────────────────────────────────────────────
 
-/// Lazily‑loaded, in‑memory singleton.
-/// Call `config()` anywhere to obtain an **immutable** view.
-pub fn config() *const Config {
-    // Safety: first call wins. No race in single‑threaded init because Zig
-    //   runs global constructors sequentially. For multithread, wrap in
-    //   `std.atomic.Once`.
-    if (g_config == null) {
-        g_config = loadConfig() catch |err| {
-            std.debug.panic("Failed to load config: {}", .{err});
+/// YAML schema ⇒ Zig struct.
+/// Every field has a default so missing keys don’t crash the loader.
+pub const AppConfig = struct {
+    /// Human-readable application name (`name:` in YAML)
+    name: []const u8 = "drzzln",
+
+    /// Parse a merged YAML document into an `AppConfig`.
+    /// Unknown keys are ignored; wrong types raise an error.
+    pub fn fromYaml(doc: *const yaml.Document, arena: std.mem.Allocator) !AppConfig {
+        var cfg: AppConfig = .{}; // start with defaults
+
+        if (doc.lookup("name")) |node| switch (node.tag) {
+            .scalar => cfg.name = try node.scalarString(arena),
+            else     => return error.InvalidType,
         };
-    }
-    return &g_config.?; // non‑null now
-}
 
-/// -----------------------------
-/// DTO & helpers
-/// -----------------------------
-
-/// Dynamic tree of YAML values.  Each lookup allocates **no memory** because
-/// it borrows slices from the backing arena.
-const Config = struct {
-    root: yaml.Document,
-
-    /// Access chain helper: `try config().get("database").get("host")`
-    pub fn get(self: *const Config, key: []const u8) !*const yaml.Node {
-        return self.root.lookup(key);
+        return cfg;
     }
 };
 
-/// -----------------------------
-/// Implementation details
-/// -----------------------------
+// ─────────────────────────────────────────────────────────────
+// Public API – immutable singleton
+// ─────────────────────────────────────────────────────────────
 
-var g_config: ?Config = null; // global singleton
+var g_cfg: ?AppConfig = null;
 
-/// Load & reverse‑merge YAML files in precedence order.
-fn loadConfig() !Config {
-    const gpa = std.heap.c_allocator;
-    var arena_allocator = std.heap.ArenaAllocator.init(gpa);
-    const arena = &arena_allocator.allocator;
+/// Access the lazily-loaded, in-memory config.
+pub fn config() *const AppConfig {
+    if (g_cfg == null) {
+        g_cfg = loadConfig() catch |err| {
+            std.debug.panic("config load failure: {}", .{err});
+        };
+    }
+    return &g_cfg.?;
+}
 
-    var doc = yaml.Document.init(arena);
+// ─────────────────────────────────────────────────────────────
+// Loader: reverse-merge YAML → AppConfig
+// ─────────────────────────────────────────────────────────────
 
-    // iterate candidate paths high → low priority, reversing at merge time
+fn loadConfig() !AppConfig {
+    const arena_alloc = std.heap.ArenaAllocator.init(std.heap.c_allocator);
+    const arena       = &arena_alloc.allocator;
+    defer arena_alloc.deinit();
+
+    var merged = yaml.Document.init(arena);
+
     var paths = buildPathList();
     while (paths.pop()) |p| {
         if (try fileExists(p)) {
             const bytes = try std.fs.cwd().readFileAlloc(arena, p, 1 << 20);
-            var sub_doc = yaml.Document.init(arena);
-            try sub_doc.parse(bytes);
-            try doc.merge(&sub_doc); // reverse merge (fields only fill when missing)
+            var doc = yaml.Document.init(arena);
+            try doc.parse(bytes);
+            try merged.merge(&doc); // reverse merge (higher priority overwrites)
         }
     }
 
-    return Config{ .root = doc };
+    return AppConfig.fromYaml(&merged, arena);
 }
 
-/// Build the precedence list: lowest priority first so we can pop() for reverse.
+// ─────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────
+
+/// Build precedence list (lowest priority first so we can pop()).
 fn buildPathList() std.ArrayListUnmanaged([]const u8) {
     var list: std.ArrayListUnmanaged([]const u8) = .{};
+
     const cwd = std.fs.cwd();
-    // 1. /etc/<app>/config.yml
-    list.appendAssumeCapacity("/etc/" ++ app_name ++ "/config.yml");
-    // 2. $HOME/.config/<app>/config.yml
+    list.appendAssumeCapacity(
+        (cwd.realpathAlloc(std.heap.page_allocator, ".") catch ".") ++
+        "/" ++ app_name ++ ".yml",
+    );
+
     if (std.os.getenv("HOME")) |home| {
-        list.appendAssumeCapacity(home ++ "/.config/" ++ app_name ++ "/config.yml");
-        // 3. $HOME/.<app>.yml
         list.appendAssumeCapacity(home ++ "/." ++ app_name ++ ".yml");
+        list.appendAssumeCapacity(home ++ "/.config/" ++ app_name ++ "/config.yml");
     }
-    // 4. ./<app>.yml
-    list.appendAssumeCapacity((cwd.realpathAlloc(std.heap.page_allocator, ".") catch ".") ++ "/" ++ app_name ++ ".yml");
+
+    list.appendAssumeCapacity("/etc/" ++ app_name ++ "/config.yml");
     return list;
 }
 
-/// Small utility: true if file exists and is regular.
+/// Return `true` if file exists, else `false`.
 fn fileExists(path: []const u8) !bool {
     return std.fs.cwd().access(path, .{}) catch |err| switch (err) {
         error.FileNotFound => false,
-        else => |e| return e,
+        else               => |e| return e,
     };
 }
 
