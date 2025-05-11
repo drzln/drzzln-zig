@@ -16,9 +16,10 @@ pub fn build(b: *std.Build) void {
     // config module (src/config/root.zig)
     // -------------------------------------------------------------
     const cfg_mod = b.createModule(.{
-        .source_file = b.path("src/config/root.zig"),
-        .dependencies = &.{ yaml_pkg },
+        .root_source_file = b.path("src/config/root.zig"),
+        .dependencies     = &.{ yaml_pkg },
     });
+
 
     // -------------------------------------------------------------
     // Static library
