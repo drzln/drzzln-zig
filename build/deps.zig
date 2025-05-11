@@ -2,7 +2,7 @@
 const std = @import("std");
 
 pub fn yaml(b: *std.Build) *std.Build.Module {
-    return b.dependency("yaml", .{}).module("yaml");
+    return b.dependency("ymlz", .{});
 }
 
 pub fn configModule(
