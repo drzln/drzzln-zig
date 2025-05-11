@@ -1,12 +1,15 @@
 // build/artifacts.zig
 const std = @import("std");
 
-fn wire(mod: *std.Build.Step.Compile, cfg: *std.Build.Module, y: *std.Build.Module) void {
+pub fn wire(
+    mod: *std.Build.Step.Compile,
+    cfg: *std.Build.Module,
+    yaml: *std.Build.Module,
+) void {
     mod.addModule("config", cfg);
-    mod.addModule("yaml", y);
+    mod.addModule("yaml", yaml);
 }
 
-/// Static library (installs to $prefix/lib)
 pub fn makeLibrary(
     b: *std.Build,
     target: std.zig.CrossTarget,
@@ -24,7 +27,6 @@ pub fn makeLibrary(
     b.installArtifact(lib);
 }
 
-/// Executable (returned so run/tests can depend on it)
 pub fn makeExecutable(
     b: *std.Build,
     target: std.zig.CrossTarget,
@@ -43,7 +45,6 @@ pub fn makeExecutable(
     return exe;
 }
 
-/// `zig build run -- args…`
 pub fn makeRunStep(b: *std.Build, exe: *std.Build.Step.Compile) void {
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
