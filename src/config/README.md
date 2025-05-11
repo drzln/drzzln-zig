@@ -1,4 +1,4 @@
-# Whiterun Config Library
+# App Config Library
 
 _Immutable in‑memory · Lazy singleton · YAML reverse‑merge · Strictly typed_
 
@@ -10,10 +10,10 @@ const cfg = @import("config").config();   // *const AppConfig
 
 The first call parses YAML from four locations (lowest → highest priority):
 
-1. `./${app}.yml`
-2. `$HOME/.${app}.yml`
-3. `$HOME/.config/${app}/config.yml`
-4. `/etc/${app}/config.yml`
+1. `./whiterun.yml`
+2. `$HOME/.whiterun.yml`
+3. `$HOME/.config/whiterun/config.yml`
+4. `/etc/whiterun/config.yml`
 
 Files are **reverse‑merged** so that higher‑priority values overwrite but never delete lower ones. The merged document is converted into a strongly‑typed **`AppConfig`** instance and memoised; subsequent calls return a pointer to the immutable singleton with _zero_ runtime allocation.
 
@@ -23,7 +23,7 @@ Files are **reverse‑merged** so that higher‑priority values overwrite but ne
 
 ```zig
 pub const AppConfig = struct {
-    name: []const u8 = "${app}",
+    name: []const u8 = "whiterun",
 };
 ```
 
@@ -52,7 +52,7 @@ pub const Features = struct {
 };
 
 pub const AppConfig = struct {
-    name: []const u8 = "${app}",
+    name: []const u8 = "whiterun",
     database: Database = .{},   // ← default initialiser uses defaults above
     features: Features = .{},
     allowed_ips: []const []const u8 = &.{}, // list example
@@ -85,7 +85,7 @@ _(The helper `parseField` already handles scalars, nested structs via recursion,
 ### 3. Write the YAML
 
 ```yaml
-name: Production Whiterun
+name: Production App
 
 database:
   host: db.internal
