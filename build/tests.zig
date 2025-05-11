@@ -1,6 +1,6 @@
 // build/tests.zig
 const std = @import("std");
-const art = @import("artifacts.zig");
+const art = @import("build/artifacts.zig");
 
 fn addTest(
     b: *std.Build,
@@ -19,6 +19,7 @@ fn addTest(
     return b.addRunArtifact(t);
 }
 
+/// Register root, main, and config tests under one “test” step
 pub fn addAllTests(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
@@ -27,11 +28,15 @@ pub fn addAllTests(
     yaml: *std.Build.Module,
 ) void {
     const step = b.step("test", "Run unit tests");
-    for ([_][]const u8{
+
+    const files = [_][]const u8{
         "src/root.zig",
         "src/main.zig",
         "src/config/config_test.zig",
-    }) |p| {
-        step.dependOn(&addTest(b, p, target, optimize, cfg, yaml).step);
+    };
+
+    for (files) |p| {
+        const run = addTest(b, p, target, optimize, cfg, yaml);
+        step.dependOn(&run.step);
     }
 }

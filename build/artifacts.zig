@@ -1,15 +1,19 @@
 // build/artifacts.zig
 const std = @import("std");
 
+/// Attach shared modules to a compile step (Zig 0.13 syntax)
 pub fn wire(
     mod: *std.Build.Step.Compile,
     cfg: *std.Build.Module,
     yaml: *std.Build.Module,
 ) void {
-    mod.addModule("config", cfg);
-    mod.addModule("yaml", yaml);
+    mod.root_module.addImport("config", cfg);
+    mod.root_module.addImport("yaml", yaml);
 }
 
+// ─────────────────────────────────────────────
+// Static library
+// ─────────────────────────────────────────────
 pub fn makeLibrary(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
@@ -27,6 +31,9 @@ pub fn makeLibrary(
     b.installArtifact(lib);
 }
 
+// ─────────────────────────────────────────────
+// Executable
+// ─────────────────────────────────────────────
 pub fn makeExecutable(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
@@ -45,6 +52,9 @@ pub fn makeExecutable(
     return exe;
 }
 
+// ─────────────────────────────────────────────
+// Run step (`zig build run -- args…`)
+// ─────────────────────────────────────────────
 pub fn makeRunStep(b: *std.Build, exe: *std.Build.Step.Compile) void {
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
