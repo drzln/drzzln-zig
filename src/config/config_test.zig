@@ -15,7 +15,7 @@ fn parseYaml(arena: std.mem.Allocator, text: []const u8) !yaml.Document {
 test "AppConfig defaults when YAML is empty" {
     var arena_alloc = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena_alloc.deinit();
-    const arena = &arena_alloc.allocator;
+    const arena = arena_alloc.allocator;
     const doc  = try parseYaml(arena, "");
     const conf = try cfgm.AppConfig.fromYaml(&doc, arena);
     try expectStr("drzzln", conf.name);
@@ -24,7 +24,7 @@ test "AppConfig defaults when YAML is empty" {
 test "AppConfig parses 'name' override" {
     var arena_alloc = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena_alloc.deinit();
-    const arena = &arena_alloc.allocator;
+    const arena = arena_alloc.allocator;
 
     const yaml_text =
         \\name: My Awesome Service
@@ -38,7 +38,7 @@ test "AppConfig parses 'name' override" {
 test "AppConfig invalid type raises error" {
     var arena_alloc = std.heap.ArenaAllocator.init(std.testing.allocator);
     defer arena_alloc.deinit();
-    const arena = &arena_alloc.allocator;
+    const arena = arena_alloc.allocator;
 
     const yaml_text =
         \\name:
