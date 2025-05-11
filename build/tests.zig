@@ -1,6 +1,6 @@
 // build/tests.zig
 const std = @import("std");
-const art = @import("build/artifacts.zig");
+const art = @import("artifacts.zig");
 
 fn addTest(
     b: *std.Build,
