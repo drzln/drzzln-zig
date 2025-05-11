@@ -12,10 +12,10 @@ pub fn wire(
 
 pub fn makeLibrary(
     b: *std.Build,
-    target: std.zig.CrossTarget,
+    target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
     cfg: *std.Build.Module,
-    y: *std.Build.Module,
+    yaml: *std.Build.Module,
 ) void {
     const lib = b.addStaticLibrary(.{
         .name = "drzzln-zig",
@@ -23,16 +23,16 @@ pub fn makeLibrary(
         .target = target,
         .optimize = optimize,
     });
-    wire(lib, cfg, y);
+    wire(lib, cfg, yaml);
     b.installArtifact(lib);
 }
 
 pub fn makeExecutable(
     b: *std.Build,
-    target: std.zig.CrossTarget,
+    target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
     cfg: *std.Build.Module,
-    y: *std.Build.Module,
+    yaml: *std.Build.Module,
 ) *std.Build.Step.Compile {
     const exe = b.addExecutable(.{
         .name = "drzzln-zig",
@@ -40,7 +40,7 @@ pub fn makeExecutable(
         .target = target,
         .optimize = optimize,
     });
-    wire(exe, cfg, y);
+    wire(exe, cfg, yaml);
     b.installArtifact(exe);
     return exe;
 }
