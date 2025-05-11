@@ -5,7 +5,7 @@ const yaml = @import("yaml");
 
 /// Application name used for config search paths.
 /// Overwrite at comptime from build.zig if necessary.
-pub const app_name: []const u8 = "whiterun";
+pub const app_name: []const u8 = "drzzln";
 
 /// -----------------------------
 /// Public API
